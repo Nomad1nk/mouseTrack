@@ -77,6 +77,7 @@ python eye_mouse.py
 ---
 
 # ハンドジェスチャー認識システム - Hand Gesture Recognition System
+# 視線認識システム - Eye Gesture Recognition System
 
 Pythonを使用した**ハンドジェスチャー認識** + **バーチャルマウス制御**システム。
 
