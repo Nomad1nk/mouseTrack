@@ -17,8 +17,8 @@ mp_drawing = mp.solutions.drawing_utils
 screen_width, screen_height = pyautogui.size()
 
 
-pyautogui.FAILSAFE = False  
-pyautogui.PAUSE = 0 
+pyautogui.FAILSAFE = False  # Хулганыг булан руу аваачихад програм зогсохгүй байх тохиргоо
+pyautogui.PAUSE = 0 # Хулганы үйлдэл хоорондын хүлээлтийг 0 болгох (илүү хурдан) 
 
 cam_width, cam_height = 640, 480
 
@@ -41,18 +41,21 @@ mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
 
 def get_angle(a, b, c):
-    """Calculate angle between three points (from GitHub repo)"""
+    """Calculate angle between three points (from GitHub repo)
+    Гурван цэгийн хоорондох өнцгийг тооцоолох (GitHub репо-оос авсан)
+    """
     radians = np.arctan2(c[1] - b[1], c[0] - b[0]) - np.arctan2(a[1] - b[1], a[0] - b[0])
     angle = np.abs(np.degrees(radians))
     return angle
 
 class VirtualMouse:
     def __init__(self):
+        """Initialize mouse settings and variables - Хулганы тохиргоо болон хувьсагчдыг эхлүүлэх"""
         self.hands = mp_hands.Hands(
-            static_image_mode=False,
-            max_num_hands=1,
-            min_detection_confidence=0.7,
-            min_tracking_confidence=0.5
+            static_image_mode=False, # Видео горимд ажиллах (зураг биш)
+            max_num_hands=1, # Зөвхөн нэг гар таних
+            min_detection_confidence=0.7, # Танилтын нарийвчлал (70%)
+            min_tracking_confidence=0.5 # Дагах нарийвчлал (50%)
         )
         self.cap = cv2.VideoCapture(0)
         self.cap.set(3, cam_width)
@@ -103,16 +106,17 @@ class VirtualMouse:
         }
         
     def get_finger_status(self, landmarks):
-        """Check which fingers are extended"""
+        """Check which fingers are extended - Аль хуруунууд тэнийсэн байгааг шалгах"""
         finger_tips = [8, 12, 16, 20] 
         finger_status = []
         
         for tip in finger_tips:
             
+            # Хурууны үзүүр нь үенээсээ доор байгаа эсэхийг шалгах (Y тэнхлэг доошоо өсдөг)
             if landmarks[tip].y < landmarks[tip - 2].y:
-                finger_status.append(1)  
+                finger_status.append(1)  # Хуруу тэнийсэн
             else:
-                finger_status.append(0)  
+                finger_status.append(0)  # Хуруу нугалсан  
                 
         
         if landmarks[4].x < landmarks[3].x:  
@@ -123,35 +127,39 @@ class VirtualMouse:
         return finger_status
     
     def detect_gesture(self, landmarks):
-        """Detect specific hand gestures - SIMPLIFIED & PRACTICAL!"""
+        """Detect specific hand gestures - SIMPLIFIED & PRACTICAL! - Гарын дохиог таних (Хялбаршуулсан & Практик)"""
         finger_status = self.get_finger_status(landmarks)
         
     
         self.last_finger_status = finger_status
         
      
+        # Зөвхөн долоовор болон дунд хуруу тэнийсэн бол -> Зүүн товч дарах
         if finger_status == [0, 1, 1, 0, 0]:
             return "left_click"
         
         
+        # Долоовор, дунд, ядам хуруунууд тэнийсэн бол -> Чирэх үйлдэл
         elif finger_status == [0, 1, 1, 1, 0]:
             if self.is_dragging:
-                return "drag_hold"
+                return "drag_hold" # Чирж байгаа үед
             else:
-                return "drag_start"
+                return "drag_start" # Чирч эхлэх үед
         
       
+        # Зөвхөн эрхий хуруу тэнийсэн бол -> Давхар дарах
         elif finger_status == [1, 0, 0, 0, 0]:
             return "double_click"
         
        
+        # Зөвхөн долоовор хуруу тэнийсэн бол -> Курсор хөдөлгөх
         if finger_status[1] == 1:  
             return "move"
         
         return "none"
 
     def draw_finger_status_overlay(self, frame):
-        """Draw a compact finger-status overlay (always visible)."""
+        """Draw a compact finger-status overlay (always visible). - Хурууны төлөвийг харуулах цонхыг зурах (үргэлж харагдана)"""
         if not hasattr(self, 'last_finger_status'):
             return
 
@@ -177,7 +185,7 @@ class VirtualMouse:
         cv2.putText(frame, f"Array: {arr_text}", (x0 + 8, y0 + box_h - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 255), 1)
     
     def is_pinching(self, landmarks, finger1_tip, finger2_tip):
-        """Check if two fingers are pinching (touching)"""
+        """Check if two fingers are pinching (touching) - Хоёр хуруу чимхсэн эсэхийг шалгах (хүрэлцэх)"""
         tip1 = landmarks[finger1_tip]
         tip2 = landmarks[finger2_tip]
         
@@ -186,11 +194,12 @@ class VirtualMouse:
         return distance < 0.05  
     
     def move_cursor(self, index_finger):
-        """Move cursor based on index finger position"""
+        """Move cursor based on index finger position - Долоовор хурууны байрлалаар курсорыг хөдөлгөх"""
         x = int(index_finger.x * screen_width)
         y = int(index_finger.y * screen_height)
         
         
+        # Курсорын хөдөлгөөнийг зөөлрүүлэх (Smoothing)
         curr_x = self.prev_x + (x - self.prev_x) / smoothing
         curr_y = self.prev_y + (y - self.prev_y) / smoothing
         
@@ -204,7 +213,7 @@ class VirtualMouse:
         return int(curr_x), int(curr_y)
     
     def run(self):
-        """Main loop with advanced features"""
+        """Main loop with advanced features - Үндсэн ажиллагааны давталт (дэвшилтэт боломжуудтай)"""
         print("🖱️ Advanced Virtual Mouse Control Started!")
         print("📹 Camera feed opening...")
         print("\n🖐️ Gestures (IMPROVED - Илүү амархан!):")
@@ -234,18 +243,19 @@ class VirtualMouse:
             frame_start = time.time()
             success, frame = self.cap.read()
             if not success:
-                print("❌ Failed to capture frame")
+                print("❌ Failed to capture frame - Камерын дүрсийг авч чадсангүй")
                 break
             
             frame_count += 1
             
            
+            # Дүрсийг толь шиг эргүүлэх
             frame = cv2.flip(frame, 1)
             
-            
+            # BGR өнгөний орон зайг RGB руу хөрвүүлэх (MediaPipe-д зориулж)
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             
-            
+            # Гарыг илрүүлэх
             results = self.hands.process(rgb_frame)
             
             gesture = "none"
@@ -264,9 +274,10 @@ class VirtualMouse:
                     self.draw_enhanced_landmarks(frame, hand_landmarks)
                     
                     
+                    # Гарын цэгүүдийг авах
                     landmarks = hand_landmarks.landmark
                     
-                    
+                    # Дохиог таних
                     gesture = self.detect_gesture(landmarks)
                     
                    
@@ -283,7 +294,7 @@ class VirtualMouse:
                     
                     
                     if gesture in ["move"]:
-                        index_finger = landmarks[8]  # Index finger tip
+                        index_finger = landmarks[8]  # Долоовор хурууны үзүүр
                         cursor_pos = self.move_cursor(index_finger)
                         self.total_moves += 1
                         
@@ -294,18 +305,18 @@ class VirtualMouse:
                             self.trail_points.append((finger_x, finger_y))
                         
                     elif gesture == "left_click" and self.click_cooldown == 0:
-                      
+                        # Зүүн товч дарах үйлдэл
                         pyautogui.click()
-                        self.click_cooldown = 15
+                        self.click_cooldown = 15 # Дараагийн даралт хүртэл хүлээх хугацаа
                         self.total_clicks += 1
                         print(f"✌️ 2-Finger Click! (Total: {self.total_clicks})")
                        
                         cv2.circle(frame, (cam_width//2, cam_height//2), 60, (255, 255, 0), -1)
                     
                     elif gesture == "drag_start":
-                       
+                        # Чирэх үйлдлийг эхлүүлэх
                         if not self.is_dragging:
-                            pyautogui.mouseDown()
+                            pyautogui.mouseDown() # Хулганы товчийг дараад барих
                             self.is_dragging = True
                             self.total_drags += 1
                             self.drag_start_pos = pyautogui.position()
@@ -320,9 +331,9 @@ class VirtualMouse:
                                        cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 3)
                     
                     elif gesture == "move":
-                    
+                        # Хэрэв чирж байсан бол чирэх үйлдлийг зогсоох (зөвхөн 1 хуруу үлдсэн үед)
                         if self.is_dragging:
-                            pyautogui.mouseUp()
+                            pyautogui.mouseUp() # Хулганы товчийг тавих
                             self.is_dragging = False
                             drag_end = pyautogui.position()
                             if self.drag_start_pos:
@@ -332,7 +343,7 @@ class VirtualMouse:
                             self.drag_start_pos = None
                     
                     elif gesture == "double_click" and self.click_cooldown == 0:
-                        pyautogui.doubleClick()
+                        pyautogui.doubleClick() # Давхар дарах
                         self.click_cooldown = 25
                         self.total_double_clicks += 1
                         if self.is_dragging:
@@ -354,7 +365,7 @@ class VirtualMouse:
             else:
                 
                 if self.is_dragging:
-                    pyautogui.mouseUp()
+                    pyautogui.mouseUp() # Гар алга болсон үед чирэхийг зогсоох
                     self.is_dragging = False
                     print("👋 Hand lost - Drag released")
             
@@ -421,7 +432,7 @@ class VirtualMouse:
         print("\n✅ Virtual Mouse stopped")
     
     def draw_enhanced_landmarks(self, frame, hand_landmarks):
-        """Draw hand landmarks with enhanced visuals"""
+        """Draw hand landmarks with enhanced visuals - Гарын цэгүүдийг сайжруулсан байдлаар зурах"""
        
         for connection in mp_hands.HAND_CONNECTIONS:
             start_idx = connection[0]
@@ -433,7 +444,7 @@ class VirtualMouse:
             start_point = (int(start.x * cam_width), int(start.y * cam_height))
             end_point = (int(end.x * cam_width), int(end.y * cam_height))
             
-            
+            # Холбоос шугамыг зурах
             cv2.line(frame, start_point, end_point, (0, 255, 0), 3)
         
         
@@ -442,6 +453,7 @@ class VirtualMouse:
             y = int(landmark.y * cam_height)
             
            
+            # Хурууны үзүүрүүдийг тодруулж зурах
             if idx in [4, 8, 12, 16, 20]:
                 cv2.circle(frame, (x, y), 8, (255, 0, 0), -1)
                 cv2.circle(frame, (x, y), 10, (255, 255, 255), 2)
@@ -449,7 +461,7 @@ class VirtualMouse:
                 cv2.circle(frame, (x, y), 5, (0, 255, 0), -1)
     
     def draw_info_overlay(self, frame, gesture, cursor_pos, confidence, fps, frame_count):
-        """Draw comprehensive information overlay"""
+        """Draw comprehensive information overlay - Дэлгэрэнгүй мэдээллийн самбарыг зурах"""
         overlay = frame.copy()
         
         cv2.rectangle(overlay, (5, 5), (450, 280), (0, 0, 0), -1)
@@ -533,7 +545,7 @@ class VirtualMouse:
                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, (100, 100, 100), 1)
     
     def draw_gesture_indicator(self, frame, gesture):
-        """Draw a visual indicator for current gesture"""
+        """Draw a visual indicator for current gesture - Одоогийн дохионы дүрсийг зурах"""
         radius = 40
         center_x = cam_width - radius - 20
         center_y = radius + 20
@@ -563,7 +575,7 @@ class VirtualMouse:
                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
     
     def reset_statistics(self):
-        """Reset all statistics"""
+        """Reset all statistics - Бүх статистикийг дахин эхлүүлэх"""
         self.total_clicks = 0
         self.total_moves = 0
         self.total_double_clicks = 0
@@ -572,7 +584,7 @@ class VirtualMouse:
         self.gesture_durations.clear()
     
     def print_session_summary(self):
-        """Print session statistics"""
+        """Print session statistics - Сессийн статистикийг хэвлэх"""
         print("\n" + "="*50)
         print("📊 SESSION SUMMARY")
         print("="*50)

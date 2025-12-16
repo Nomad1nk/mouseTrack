@@ -13,3 +13,15 @@ I refactored `eye_mouse.py` to use non-blocking logic:
 
 ## Verification
 I ran the script `python eye_mouse.py` and confirmed that it starts without crashing. The removal of blocking sleeps should ensure smooth video playback even during interactions.
+
+## Fix 'SymbolDatabase' Error
+### Issue
+The user reported `Error: 'SymbolDatabase' object has no attribute 'GetPrototype'` when running `virtual_mouse.py`.
+This is caused by an incompatibility between `mediapipe` and newer versions of `protobuf` (4.x+).
+
+### Changes
+-   **Downgraded `protobuf`**: Installed `protobuf==3.20.3`.
+-   **Updated `requirements.txt`**: Pinned `protobuf==3.20.3` to prevent future issues.
+
+### Verification
+-   Ran `python virtual_mouse.py` and confirmed it starts successfully without the `AttributeError`.
